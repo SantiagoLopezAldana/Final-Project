@@ -1,11 +1,12 @@
-module thresholding #(parameter BRIGHT = 1)(
-    input wire clk,
+module thresholding #(parameter BRIGHT = 1) //BRIGHT = 1, los más claros en escala de gris se vuelven blancos, de lo contrario (BRIGHT = 0) negros
+	(input wire clk,
     input wire rst,
     input wire valid,
 	input wire [7:0] gray,
-	input wire [7:0] th,
     output reg valid_o,
 	output reg pixel); //"blanco" o "negro"
+
+	wire th = 7'd127; //umbral: 127/255
 	
     always @(posedge clk or posedge rst) begin
         if (rst) begin

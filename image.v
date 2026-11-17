@@ -5,7 +5,7 @@ module image(
 	output wire UART_TX
 	output reg [7:0] R,
 	output reg [7:0] G,
-	output reg [7:0] B);
+	output reg [7:0] B); //0-255 tono
 	
 	wire reset;
 	assign reset = ~RESET_N;
@@ -29,49 +29,27 @@ module image(
 	
 	always @(posedge CLOCK_50 or posedge reset) begin
 		if (reset) begin
-			tx_data <= 8'd0;
-			tx_start <= 1'b0;
-			tx_state <= 2'd0;
-			data_to_send <= 32'd0;
-			tx_busy_prev <= 1'b0;
+			R <= 8'd0;
+			G <= 8'd0;
+			B <= 8'd0;
+			state <= 2'd0;
 		end else begin
-			tx_busy_prev <= tx_busy;//estado anterior
-			tx_start <= 1'b0;        
-			
-			case (state)
-				2'd0: begin 
-					if (rx_done && !tx_busy) begin
-						data <= resultado;    
-						tx_data <= data[31:24];//Byte 4
-						tx_start <= 1'b1;                 
-						tx_state <= 2'd1;                 
+			if (rx_done) begin      
+				case (state)
+					2'd0: begin //Rojo
+						R <= rx_data;
+						state <= 2'd1;
 					end
-				end
-				
-				2'd1: begin 
-					if (tx_busy_prev && !tx_busy) begin
-						tx_data <= data[23:16];//Byte 3
-						tx_start <= 1'b1;
-						tx_state <= 2'd2;
+					2'd1: begin //verde
+						G <= rx_data;
+						state <= 2'd2;
 					end
-				end
-				
-				2'd2: begin 
-					if (tx_busy_prev && !tx_busy) begin
-						tx_data <= data[15:8];//Byte 2
-						tx_start <= 1'b1;
-						tx_state <= 2'd3;
+					2'd2: begin 
+						B <= rx_data;
+						state <= 2'd0;
 					end
-				end
-				
-				2'd3: begin 
-					if (tx_busy_prev && !tx_busy) begin
-						tx_data <= data[7:0];//Byte 1
-						tx_start <= 1'b1;
-						tx_state <= 2'd0;           
-					end
-				end
-			endcase
+				endcase
+			end
 		end
 	end
 endmodule

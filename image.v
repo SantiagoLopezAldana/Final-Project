@@ -1,3 +1,4 @@
+//Py->UART->esp32->FPGA
 module image(
 	input wire CLOCK_50,
 	input wire RESET_N,

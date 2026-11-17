@@ -1,12 +1,10 @@
-module contouring #(parameter WIDTH = 640)(
+module contouring #(parameter WIDTH = 128)(
     input wire clk,
     input wire rst,
     input wire valid,
-    input wire start,
-    input wire pixel,
+    input wire pixel, //gris
     output reg valid_o,
-    output reg start_o,
-    output reg pixel_o);
+	output reg pixel_o);
 	
     reg [WIDTH-1:0] line;     // linea anterior: line[WIDTH-1] = pixelel de arriba
     reg [9:0] x;

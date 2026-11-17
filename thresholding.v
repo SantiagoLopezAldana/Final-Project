@@ -6,7 +6,7 @@ module thresholding #(parameter BRIGHT = 1) //BRIGHT = 1, los más claros en esc
     output reg valid_o,
 	output reg pixel); //"blanco" o "negro"
 
-	wire th = 7'd127; //umbral: 127/255
+	localparam th = 8'd127; //umbral: 127/255
 	
     always @(posedge clk or posedge rst) begin
         if (rst) begin

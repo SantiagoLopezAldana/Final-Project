@@ -11,23 +11,21 @@
 //Cápsula/Forma: máx, mín ->centroide 
 //* tallo, característica para detectar
 
-module features #(parameter WIDTH = 640, parameter HEIGHT = 480)(
+module features #(parameter WIDTH = 128, parameter HEIGHT = 128)(
     input wire clk,
     input wire rst,
     input wire valid,
-    input wire start,
-    input wire pixel,
-    output reg done,
-    output reg [18:0] area,
-    output reg [19:0] perimeter,
-    output reg [9:0] w,
-    output reg [9:0] h);
+    input wire pixel, //ya erosionados
+	output reg [13:0] area, //16385 px máx-> 14 bits
+	output reg [15:0] perimeter,
+	output reg [7:0] w, //8 bits de ancho/largo máximos
+	output reg [7:0] h);
 	
     reg [WIDTH-1:0] line;
-    reg [9:0] x, y;
-    reg [18:0] a;
-    reg [19:0] p;
-    reg [9:0] xmin, xmax, ymin, ymax;
+	reg [7:0] x, y;
+	reg [13:0] a;
+	reg [15:0] p;
+	reg [7:0] xmin, xmax, ymin, ymax;
     reg seen;
     reg last;
 

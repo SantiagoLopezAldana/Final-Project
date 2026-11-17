@@ -4,7 +4,7 @@ module thresholding #(parameter BRIGHT = 1) //BRIGHT = 1, los más claros en esc
     input wire valid,
 	input wire [7:0] gray,
     output reg valid_o,
-	output reg pixel); //"blanco" o "negro"
+	 output reg pixel); //255->1 ("blanco" o "negro")
 
 	localparam th = 8'd127; //umbral: 127/255
 	

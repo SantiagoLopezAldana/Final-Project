@@ -1,4 +1,4 @@
-module thresholding #(parameter BRIGHT = 1) //BRIGHT = 1, los más claros en escala de gris se vuelven blancos, de lo contrario (BRIGHT = 0) negros
+module thresholding 
 	(input wire clk,
     input wire rst,
     input wire valid,
@@ -14,7 +14,10 @@ module thresholding #(parameter BRIGHT = 1) //BRIGHT = 1, los más claros en esc
             pixel <= 1'b0;
         end else begin
             valid_o <= valid;
-            if (valid) pixel <= BRIGHT ? (gray > th) : (gray < th);
+			if (valid) begin
+				if (gray > th) pixel <= 1; //si mayor al umbral blanco
+				else pixel <= 0; //si es menor es negro
+			end
         end
     end
 endmodule

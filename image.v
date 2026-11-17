@@ -1,16 +1,16 @@
-module image(
+module image #(parameter bits = 8)(
 	input wire CLOCK_50,
 	input wire RESET_N,
 	input wire UART_RX,
 	output wire UART_TX
-	output reg [7:0] R,
-	output reg [7:0] G,
-	output reg [7:0] B); //0-255 tono
+	output reg [bits-1:0] R,
+	output reg [bits-1:0] G,
+	output reg [bits-1:0] B); //0-255 tono
 	
 	wire reset;
 	assign reset = ~RESET_N;
 	
-	wire [7:0] rx_data;
+	wire [bits-1:0] rx_data;
 	wire rx_done;
 	
 
@@ -29,9 +29,9 @@ module image(
 	
 	always @(posedge CLOCK_50 or posedge reset) begin
 		if (reset) begin
-			R <= 8'd0;
-			G <= 8'd0;
-			B <= 8'd0;
+			R <= bits'd0;
+			G <= bits'd0;
+			B <= bits'd0;
 			state <= 2'd0;
 		end else begin
 			if (rx_done) begin      

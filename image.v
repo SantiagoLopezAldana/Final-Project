@@ -41,11 +41,11 @@ module image(
 						R <= rx_data;
 						state <= 2'd1;
 					end
-					2'd1: begin //verde
+					2'd1: begin //Verde
 						G <= rx_data;
 						state <= 2'd2;
 					end
-					2'd2: begin 
+					2'd2: begin //Azul
 						B <= rx_data;
 						state <= 2'd0;
 					end

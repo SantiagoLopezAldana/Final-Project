@@ -17,7 +17,6 @@ module contouring #(parameter WIDTH = 128)(
     always @(posedge clk or posedge rst) begin
         if (rst) begin
             valid_o <= 1'b0;
-            start_o <= 1'b0;
             pixel_o <= 1'b0;
             line <= {WIDTH{1'b0}};
             x <= 10'd0;

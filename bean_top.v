@@ -6,16 +6,12 @@ module bean_top #(
     parameter PERIM_MIN = 70,
     parameter PERIM_MAX = 220,
     parameter AR_MIN = 20,
-    parameter AR_MAX = 40
-)(
+    parameter AR_MAX = 40)(
     input wire CLOCK_50,
-    input wire RESET_N,       // Conectar a KEY[0]
-    input wire UART_RX,       // Conectar a GPIO (TX del ESP32)
-    output wire UART_TX,
-    output reg [1:0] LEDR,    // LEDR[0]: Es frijol | LEDR[1]: Objeto rechazado
-    output wire [6:0] HEX0,   // Unidades del conteo
-    output wire [6:0] HEX1    // Decenas del conteo
-);
+    input wire RESET_N,
+    input wire UART_RX,
+    output reg [1:0] LEDR);
+    
     wire rst = ~RESET_N;
     wire valid, start;
     wire [7:0] r, g, b;

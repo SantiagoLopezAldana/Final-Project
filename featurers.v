@@ -17,10 +17,11 @@ module features #(parameter WIDTH = 128, parameter HEIGHT = 128)(
     input wire start,
     input wire valid,
     input wire pixel, //ya erosionados
-	output reg [13:0] area, //16385 px máx-> 14 bits
-	output reg [15:0] perimeter,
-	output reg [7:0] w, //8 bits de ancho/largo máximos
-	output reg [7:0] h);
+    output reg done,
+    output reg [13:0] area, //16385 px máx-> 14 bits
+    output reg [15:0] perimeter,
+    output reg [7:0] w, //8 bits de ancho/largo máximos
+    output reg [7:0] h);
 	
     reg [WIDTH-1:0] line;
 	reg [7:0] x, y;

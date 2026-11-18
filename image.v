@@ -1,7 +1,6 @@
 module image #(
     parameter WIDTH = 128,
-    parameter HEIGHT = 128
-)(
+    parameter HEIGHT = 128)(
     input wire CLOCK_50,
     input wire RESET_N,
     input wire UART_RX,
@@ -10,8 +9,8 @@ module image #(
     output reg start_o,
     output reg [7:0] R,
     output reg [7:0] G,
-    output reg [7:0] B
-);
+    output reg [7:0] B);
+    
     localparam TOTAL_PIXELS = WIDTH * HEIGHT; // 16384 píxeles
 
     wire reset = ~RESET_N;

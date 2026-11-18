@@ -4,17 +4,18 @@ module classify#(
     parameter PERIM_MIN = 150,
     parameter PERIM_MAX = 500,
     parameter AR_MIN = 20,
-    parameter AR_MAX = 40
-)(
+    parameter AR_MAX = 40)(
     input wire clk,
     input wire rst,
     input wire done,
-    input wire [18:0] area,
-    input wire [19:0] perimeter,
-    input wire [9:0] w,
-    input wire [9:0] h,
-    output reg result_valid,
+    input wire [14:0] area,
+    input wire [16:0] perimeter,
+    input wire [7:0] w,
+    input wire [7:0] h,
+    input wire [7:0] cx,
+    input wire [7:0] cy,
     output reg is_bean);
+    
     wire [9:0] lng = (w >= h) ? w : h;
     wire [9:0] sht = (w >= h) ? h : w;
     wire [31:0] l16 = {18'd0, lng, 4'd0};
@@ -30,7 +31,6 @@ module classify#(
             result_valid <= 1'b0;
             is_bean      <= 1'b0;
         end else begin
-            result_valid <= done;
             if (done) is_bean <= ok_area & ok_per & ok_ar;
         end
     end

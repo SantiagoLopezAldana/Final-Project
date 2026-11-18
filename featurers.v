@@ -8,7 +8,7 @@
 //----------#--------
 
 //Perímetro Suma de #s, Área: Suma y conteo de #---------#
-//Cápsula/Forma: máx, mín ->centroide 
+//Cápsula/Forma: máx, mín, centroide 
 //* tallo, característica para detectar
 
 module features #(parameter WIDTH = 128, parameter HEIGHT = 128)(

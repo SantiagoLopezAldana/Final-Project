@@ -32,7 +32,6 @@ module features #(parameter WIDTH = 128, parameter HEIGHT = 128)(
 	reg [15:0] p;
 	reg [7:0] xmin, xmax, ymin, ymax;
 	reg [19:0] sum_x, sum_y;
-    reg seen; //px en alto
     reg last; //fin
 
 	//vecinos
@@ -66,7 +65,6 @@ module features #(parameter WIDTH = 128, parameter HEIGHT = 128)(
             xmax <= 0;
             ymin <= 7'd0;
             ymax <= 0;
-            seen <= 0;
             last <= 0;
         end else begin
             done <= 1'b0;
@@ -83,7 +81,6 @@ module features #(parameter WIDTH = 128, parameter HEIGHT = 128)(
                 xmax <= 0;
                 ymin <= 7'd0;
                 ymax <= 0;
-                seen <= 0;
                 last <= 0;
             end else if (last) begin
                 area <= a;
@@ -107,7 +104,6 @@ module features #(parameter WIDTH = 128, parameter HEIGHT = 128)(
                     a <= a + 1'b1;
                     sum_x <= sum_x + x;
                     sum_y <= sum_y + y;
-                    seen <= 1'b1;
                     if (x < xmin) xmin <= x[6:0];
                     if (x > xmax) xmax <= x[6:0];
                     if (y < ymin) ymin <= y[6:0];

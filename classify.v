@@ -14,24 +14,34 @@ module classify#(
     input wire [7:0] h,
     input wire [7:0] cx,
     input wire [7:0] cy,
+    output reg result_valid,
     output reg is_bean);
     
-    wire [9:0] lng = (w >= h) ? w : h;
-    wire [9:0] sht = (w >= h) ? h : w;
-    wire [31:0] l16 = {18'd0, lng, 4'd0};
-    wire [31:0] lo = AR_MIN * sht;
-    wire [31:0] hi = AR_MAX * sht;
-
-    wire ok_area = (area >= AREA_MIN) && (area <= AREA_MAX);
-    wire ok_per = (perimeter >= PERIM_MIN) && (perimeter <= PERIM_MAX);
-    wire ok_ar = (sht != 10'd0) && (l16 >= lo) && (l16 <= hi);
-
+    wire [7:0] lng = (w >= h) ? w : h;
+    wire [7:0] sht = (w >= h) ? h : w;
+    wire [15:0] l16 = {4'd0, lng, 4'd0};
+    wire [15:0] lo = AR_MIN * sht;
+    wire [15:0] hi = AR_MAX * sht;
+    //FALTA EL CENTROIDE
+    
+    wire ok_area =
+        (area >= AREA_MIN) &&
+        (area <= AREA_MAX);
+    wire ok_per =
+        (perimeter >= PERIM_MIN) &&
+        (perimeter <= PERIM_MAX);
+    wire ok_ar =
+        (sht != 0) &&
+        (l16 >= lo) &&
+        (l16 <= hi);
     always @(posedge clk or posedge rst) begin
         if (rst) begin
             result_valid <= 1'b0;
-            is_bean      <= 1'b0;
+            is_bean <= 1'b0;
         end else begin
-            if (done) is_bean <= ok_area & ok_per & ok_ar;
+            result_valid <= done;
+            if (done)
+                is_bean <= ok_area && ok_per && ok_ar;
         end
     end
 endmodule

@@ -19,19 +19,19 @@ module features #(parameter WIDTH = 128, parameter HEIGHT = 128)(
     input wire pixel, //ya erosionados
 	
     output reg done,
-    output reg [13:0] area, //16385 px máx-> 14 bits
-    output reg [15:0] perimeter,
+	output reg [14:0] area, //16385 px máx-> 15 bits
+	output reg [16:0] perimeter,
     output reg [7:0] w, //8 bits de ancho/largo máximos
 	output reg [7:0] h,
 	output reg [7:0] cx,
-	output reg [7:0] cx);
+	output reg [7:0] cy);
 	
     reg [WIDTH-1:0] line;
 	reg [9:0] x, y;
-	reg [13:0] a;
-	reg [15:0] p;
-	reg [7:0] xmin, xmax, ymin, ymax;
-	reg [19:0] sum_x, sum_y;
+	reg [14:0] a;
+	reg [16:0] p;
+	reg [6:0] xmin, xmax, ymin, ymax;
+	reg [20:0] sum_x, sum_y; //Sxmax= 2080768
     reg last; //fin
 
 	//vecinos
@@ -61,9 +61,9 @@ module features #(parameter WIDTH = 128, parameter HEIGHT = 128)(
             p <= 0;
             sum_x <= 0;
             sum_y <= 0;
-            xmin <= 7'd0;
+            xmin <= 7'd127; //medio
             xmax <= 0;
-            ymin <= 7'd0;
+            ymin <= 7'd127;
             ymax <= 0;
             last <= 0;
         end else begin
@@ -77,9 +77,9 @@ module features #(parameter WIDTH = 128, parameter HEIGHT = 128)(
                 p <= 0;
                 sum_x <= 0;
                 sum_y <= 0;
-                xmin <= 7'd0;
+                xmin <= 7'd127;
                 xmax <= 0;
-                ymin <= 7'd0;
+                ymin <= 7'd127;
                 ymax <= 0;
                 last <= 0;
             end else if (last) begin

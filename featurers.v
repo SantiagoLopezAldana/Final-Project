@@ -14,6 +14,7 @@
 module features #(parameter WIDTH = 128, parameter HEIGHT = 128)(
     input wire clk,
     input wire rst,
+    input wire start,
     input wire valid,
     input wire pixel, //ya erosionados
 	output reg [13:0] area, //16385 px máx-> 14 bits

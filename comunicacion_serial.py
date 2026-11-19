@@ -7,13 +7,13 @@ from PIL import Image
 # CONFIGURACION
 # ==========================================
 
-PORT = 'COM3'
-BAUD = 115200
+PORT = 'COM4'
+BAUD = 9600
 
 WIDTH = 128
 HEIGHT = 128
 
-IMAGE_PATH = r'C:\Users\185008\Downloads\bean.jpg'
+IMAGE_PATH = r'C:\Users\185008\Downloads\coffe.jpg'
 
 # Cantidad de pixeles
 TOTAL_PIXELS = WIDTH * HEIGHT
@@ -93,6 +93,9 @@ def recibir_imagen(ser):
 
     print("\nEsperando imagen procesada...")
 
+    ultimo_dato = time.time()
+    TIMEOUT_RECEPCION = 15
+
     while len(resultado) < TOTAL_RX_BYTES:
 
         faltantes = TOTAL_RX_BYTES - len(resultado)
@@ -101,15 +104,22 @@ def recibir_imagen(ser):
 
         if bloque:
             resultado.extend(bloque)
+            ultimo_dato = time.time()
 
-            porcentaje = (len(resultado) / TOTAL_RX_BYTES) * 100
+            porcentaje = len(resultado) / TOTAL_RX_BYTES * 100
 
             print(
-                f"\rRecibido: {porcentaje:.1f}%",
+                f"\rRecibido: {porcentaje:.2f}% "
+                f"({len(resultado)}/{TOTAL_RX_BYTES})",
                 end=''
             )
 
-    print("\nRecepcion finalizada.")
+        elif time.time() - ultimo_dato > TIMEOUT_RECEPCION:
+            print("\nTimeout: no llegan más datos.")
+            break
+
+    print("\nBytes recibidos:", len(resultado))
+    print("Bytes faltantes:", TOTAL_RX_BYTES - len(resultado))
 
     return resultado
 
@@ -141,11 +151,21 @@ try:
 
         hilo_tx.start()
 
-        # Recepcion simultanea
         resultado = recibir_imagen(ser)
 
-        # Esperar a que termine la transmision
+        # Esperar a que termine completamente el envio
         hilo_tx.join()
+
+        # Completar los bytes faltantes
+        if len(resultado) < TOTAL_RX_BYTES:
+
+            faltantes = TOTAL_RX_BYTES - len(resultado)
+
+            resultado.extend([0] * faltantes)
+
+            print("\nSe rellenaron", faltantes, "bytes con ceros")
+
+        print("Bytes finales:", len(resultado))
 
         print("\nComunicacion finalizada correctamente.")
 
@@ -169,7 +189,7 @@ try:
     # Guardar imagen
     img_resultado.save('resultado_fpga.png')
 
-    print("\nImagen guardada como resultado_fpga.png")
+    print("\nImagen guardada como resultado_fpga1.png")
 
     # Mostrar imagen procesada
     img_resultado.show()

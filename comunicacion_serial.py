@@ -1,4 +1,3 @@
-
 import serial
 import threading
 import time
@@ -14,7 +13,7 @@ BAUD = 115200
 WIDTH = 128
 HEIGHT = 128
 
-IMAGE_PATH = 'frijol.jpg'
+IMAGE_PATH = r'C:\Users\185008\Downloads\bean.jpg'
 
 # Cantidad de pixeles
 TOTAL_PIXELS = WIDTH * HEIGHT

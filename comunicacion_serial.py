@@ -136,6 +136,7 @@ try:
         )
 
         img_resultado.save('resultado_fpga.png')
+        img_resultado.show()
 
         print("Imagen procesada guardada como resultado_fpga.png")
 

@@ -1,75 +1,125 @@
-#python -m pip install pyserial Pillow
-
 
 import serial
-import time
 import threading
+import time
 from PIL import Image
 
+# ==========================================
+# CONFIGURACION
+# ==========================================
+
 PORT = 'COM3'
-BAUD = 9600
+BAUD = 115200
+
 WIDTH = 128
 HEIGHT = 128
-IMAGE_PATH = 'frijol.jpg'
-CHUNK_SIZE = 3072
 
+IMAGE_PATH = 'frijol.jpg'
+
+# Cantidad de pixeles
 TOTAL_PIXELS = WIDTH * HEIGHT
+
+# Cada pixel tiene 3 bytes: R, G, B
 TOTAL_TX_BYTES = TOTAL_PIXELS * 3
+
+# La FPGA devuelve 1 byte por pixel
 TOTAL_RX_BYTES = TOTAL_PIXELS
 
-# Aquí se guardarán los errores del hilo de transmisión
-tx_errors = []
+CHUNK_SIZE = 1024
 
-def transmitir(ser, data):
-    try:
-        enviados = 0
+# ==========================================
+# PREPARAR IMAGEN
+# ==========================================
 
-        while enviados < len(data):
-            bloque = data[enviados:enviados + CHUNK_SIZE]
+print("Cargando imagen...")
 
-            n = ser.write(bloque)
+img = Image.open(IMAGE_PATH).convert('RGB')
 
-            if n is None or n == 0:
-                raise IOError("No se pudieron transmitir los datos")
+# Redimensionar conservando las proporciones
+img.thumbnail((WIDTH, HEIGHT), Image.Resampling.LANCZOS)
 
-            enviados += n
+# Crear un fondo blanco de 128x128
+canvas = Image.new('RGB', (WIDTH, HEIGHT), (255, 255, 255))
 
-            porcentaje = enviados * 100 / len(data)
+# Centrar la imagen
+x = (WIDTH - img.width) // 2
+y = (HEIGHT - img.height) // 2
+
+canvas.paste(img, (x, y))
+
+# Convertir imagen a bytes RGB
+data = canvas.tobytes()
+
+if len(data) != TOTAL_TX_BYTES:
+    raise ValueError("El tamaño de la imagen RGB no es correcto")
+
+print("Imagen preparada correctamente.")
+print("Resolucion:", WIDTH, "x", HEIGHT)
+print("Bytes RGB:", TOTAL_TX_BYTES)
+
+# ==========================================
+# TRANSMISION A LA FPGA
+# ==========================================
+
+def enviar_imagen(ser):
+
+    enviados = 0
+
+    print("\nEnviando imagen a la FPGA...")
+
+    while enviados < TOTAL_TX_BYTES:
+
+        bloque = data[enviados:enviados + CHUNK_SIZE]
+
+        n = ser.write(bloque)
+
+        enviados += n
+
+        porcentaje = (enviados / TOTAL_TX_BYTES) * 100
+
+        print(
+            f"\rTransmitido: {porcentaje:.1f}%",
+            end=''
+        )
+
+    print("\nTransmision finalizada.")
+
+# ==========================================
+# RECEPCION DE LA FPGA
+# ==========================================
+
+def recibir_imagen(ser):
+
+    resultado = bytearray()
+
+    print("\nEsperando imagen procesada...")
+
+    while len(resultado) < TOTAL_RX_BYTES:
+
+        faltantes = TOTAL_RX_BYTES - len(resultado)
+
+        bloque = ser.read(min(CHUNK_SIZE, faltantes))
+
+        if bloque:
+            resultado.extend(bloque)
+
+            porcentaje = (len(resultado) / TOTAL_RX_BYTES) * 100
 
             print(
-                f"\rTransmitidos: {enviados}/{len(data)} bytes "
-                f"({porcentaje:.1f}%)",
-                end=""
+                f"\rRecibido: {porcentaje:.1f}%",
+                end=''
             )
 
-        ser.flush()
-        print("\nTransmision de imagen finalizada")
+    print("\nRecepcion finalizada.")
 
-    except Exception as e:
-        tx_errors.append(e)
+    return resultado
 
+# ==========================================
+# COMUNICACION SERIAL
+# ==========================================
 
 try:
-    # 1. Preparar la imagen
-    img = Image.open(IMAGE_PATH)
-    img = img.convert('RGB')
-    img = img.resize(
-        (WIDTH, HEIGHT),
-        Image.Resampling.LANCZOS
-    )
 
-    data = img.tobytes()
-
-    if len(data) != TOTAL_TX_BYTES:
-        raise ValueError("El tamaño de la imagen no es correcto")
-
-    print("Imagen preparada correctamente")
-    print(f"Resolucion: {WIDTH} x {HEIGHT}")
-    print(f"Pixeles: {TOTAL_PIXELS}")
-    print(f"Bytes RGB a transmitir: {TOTAL_TX_BYTES}")
-    print(f"Bytes de salida esperados: {TOTAL_RX_BYTES}")
-
-    # 2. Abrir comunicación serial
     with serial.Serial(
         PORT,
         BAUD,
@@ -77,79 +127,62 @@ try:
         write_timeout=10
     ) as ser:
 
+        # Dar tiempo para estabilizar la comunicacion
         time.sleep(2)
+
+        # Limpiar buffers
         ser.reset_input_buffer()
-        print("\nComunicacion iniciada")
+        ser.reset_output_buffer()
 
-        inicio = time.time()
-
-        # 3. Iniciar transmisión en un hilo independiente
+        # Hilo de transmision
         hilo_tx = threading.Thread(
-            target=transmitir,
-            args=(ser, data)
+            target=enviar_imagen,
+            args=(ser,)
         )
 
         hilo_tx.start()
 
-        # 4. Recibir los resultados de la FPGA
-        resultado = bytearray()
+        # Recepcion simultanea
+        resultado = recibir_imagen(ser)
 
-        print("\nRecibiendo imagen procesada...")
-
-        while len(resultado) < TOTAL_RX_BYTES:
-
-            faltantes = TOTAL_RX_BYTES - len(resultado)
-
-            bloque = ser.read(min(4096, faltantes))
-
-            if bloque:
-                resultado.extend(bloque)
-
-                porcentaje = len(resultado) * 100 / TOTAL_RX_BYTES
-
-                print(
-                    f"\rRecibidos: {len(resultado)}/{TOTAL_RX_BYTES} "
-                    f"bytes ({porcentaje:.1f}%)",
-                    end=""
-                )
-
-        # 5. Esperar a que termine el hilo de transmisión
+        # Esperar a que termine la transmision
         hilo_tx.join()
 
-        if tx_errors:
-            raise tx_errors[0]
+        print("\nComunicacion finalizada correctamente.")
 
-        fin = time.time()
+# ==========================================
+# RECONSTRUIR IMAGEN
+# ==========================================
 
-        print("\n\nTransmision y recepcion finalizadas")
-        print(f"Tiempo total: {fin - inicio:.2f} segundos")
+    # Convertir los bytes 0 y 1 a valores 0 y 255
+    imagen_binaria = bytearray(
+        255 if pixel != 0 else 0
+        for pixel in resultado
+    )
 
-        # 6. Convertir los bytes recibidos en una imagen
-        # La FPGA devuelve 0 o 1; PIL necesita valores de 0 a 255.
-        imagen_salida = bytearray(
-            255 if pixel != 0 else 0
-            for pixel in resultado
-        )
+    # Crear imagen en escala de grises
+    img_resultado = Image.frombytes(
+        'L',
+        (WIDTH, HEIGHT),
+        bytes(imagen_binaria)
+    )
 
-        img_resultado = Image.frombytes(
-            'L',
-            (WIDTH, HEIGHT),
-            bytes(imagen_salida)
-        )
+    # Guardar imagen
+    img_resultado.save('resultado_fpga.png')
 
-        img_resultado.save('resultado_fpga.png')
-        img_resultado.show()
+    print("\nImagen guardada como resultado_fpga.png")
 
-        print("Imagen procesada guardada como resultado_fpga.png")
-
-except FileNotFoundError:
-    print("No se encontro la imagen indicada")
+    # Mostrar imagen procesada
+    img_resultado.show()
 
 except serial.SerialException as e:
-    print(f"Error en el puerto serial: {e}")
 
-except KeyboardInterrupt:
-    print("\nTransmision interrumpida")
+    print("Error de comunicacion serial:", e)
+
+except FileNotFoundError:
+
+    print("No se encontro el archivo:", IMAGE_PATH)
 
 except Exception as e:
-    print(f"Error: {e}")
+
+    print("Ocurrio un error:", e)

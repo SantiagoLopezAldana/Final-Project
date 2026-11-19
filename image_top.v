@@ -1,4 +1,9 @@
 //Py->esp32 (UART), 49152 bytes->FPGA->esp32 (UART), 16385 bytes->Py
+
+//128x128px: 491520 bits rx     9600: 51.2s       115200: 4.27s
+//100x100px: 300000 bits rx     9600: 31.25s      115200: 2.6s
+//75x75px:   168759 bits rx     9600: 17.6s       115200: 1.46s
+//50x50px:   75000  bits rx     9600: 7.8s        115200: 0.65s
 module image_top #(parameter WIDTH = 128, parameter HEIGHT = 128)(
 	input wire CLOCK_50,
 	input wire RESET_N,
@@ -16,7 +21,7 @@ module image_top #(parameter WIDTH = 128, parameter HEIGHT = 128)(
 	
 	uart_rx #(
 		.CLK_FREQ(50000000),
-		.BAUD_RATE(115200)
+		.BAUD_RATE(9600)
 	) RX0 (
 		.clk(CLOCK_50),
 		.reset(reset),
@@ -27,7 +32,7 @@ module image_top #(parameter WIDTH = 128, parameter HEIGHT = 128)(
 	
 	uart_tx #(
         .CLK_FREQ(50000000),
-        .BAUD_RATE(115200)
+        .BAUD_RATE(9600)
     ) TX0 (
         .clk(CLOCK_50),
         .reset(reset),
@@ -53,6 +58,7 @@ module image_top #(parameter WIDTH = 128, parameter HEIGHT = 128)(
 			state <= 2'd0;
 			rgb_valid <= 1'b0;
 		end else begin
+			rgb_valid <= 1'b0;
 			if (rx_done) begin      
 				case (state)
 					2'd0: begin //Rojo
@@ -79,41 +85,79 @@ module image_top #(parameter WIDTH = 128, parameter HEIGHT = 128)(
 	wire [7:0] gray;
 	wire gray_valid;
 
-	grayscale GRAY (.clk(CLOCK_50), .rst(RESET_N), .valid(rgb_valid), .R(R), .G(G), .B(B), .valid_o(gray_valid), .gray(gray));
+	grayscale GRAY (.clk(CLOCK_50), .rst(reset), .valid(rgb_valid), .R(R), .G(G), .B(B), .valid_o(gray_valid), .gray(gray));
 
 	wire pixel;
 	wire thr_valid;
 
-	thresholding THR (.clk(CLOCK_50), .rst(RESET_N), .valid(gray_valid), .gray(gray), .valid_o(thr_valid), .pixel(pixel));
+	thresholding THR (.clk(CLOCK_50), .rst(reset), .valid(gray_valid), .gray(gray), .valid_o(thr_valid), .pixel(pixel));
 
 	wire pixel_o;
 	wire valid_cont;
 
-	contouring #(.WIDTH(WIDTH)) CONT (.clk(CLOCK_50), .rst(RESET_N), .valid(thr_valid), .pixel(pixel), .valid_o(valid_cont), .pixel_o(pixel_o));
+	contouring #(.WIDTH(WIDTH)) CONT (.clk(CLOCK_50), .rst(reset), .valid(thr_valid), .pixel(pixel), .valid_o(valid_cont), .pixel_o(pixel_o));
 
 	//features
 	//classify-> is_bean
+	reg [14:0] contador_cont;
+	reg [14:0] contador_tx;
+	reg [14:0] contador_rgb;
+	reg [14:0] contador_gray;
+	reg [14:0] contador_thr;
+	always @(posedge CLOCK_50 or posedge reset) begin
+    if (reset) begin
+        contador_rgb  <= 0;
+        contador_gray <= 0;
+        contador_thr  <= 0;
+        contador_cont <= 0;
+        contador_tx   <= 0;
+    end
+    else begin
+
+        if (rgb_valid)
+            contador_rgb <= contador_rgb + 1'b1;
+
+        if (gray_valid)
+            contador_gray <= contador_gray + 1'b1;
+
+        if (thr_valid)
+            contador_thr <= contador_thr + 1'b1;
+
+        if (valid_cont)
+            contador_cont <= contador_cont + 1'b1;
+
+        if (tx_start)
+            contador_tx <= contador_tx + 1'b1;
+
+		end
+	end
 	
-	//transmision
+	
+	
+	//transmisi�n
 	reg pending;
 	reg pending_pixel;
 	
 	always@(posedge CLOCK_50 or posedge reset) begin
-		if(reset)begin
-			tx_data <= 1'b0;
+		if(reset) begin
+			tx_data <= 8'd0;
+			tx_start <= 1'b0;
 			pending <= 1'b0;
 			pending_pixel <= 1'b0;
-		end else begin
-            tx_start <= 0;
+		end
+		else begin
+			tx_start <= 1'b0;
+
 			if (valid_cont) begin
-                pending <= 1'b1;
-                pending_pixel <= pixel_o;
-            end
-            if (!tx_busy && pending) begin
-                tx_data <= pending_pixel ? 8'd255 : 8'd0;
-                tx_start <= 1'b1;
-                pending <= 1'b0;
-            end
-        end
+				pending <= 1'b1;
+				pending_pixel <= pixel_o;
+			end
+
+			if (!tx_busy && pending) begin
+				tx_data <= pending_pixel ? 8'd255 : 8'd0;
+				tx_start <= 1'b1;
+				pending <= 1'b0;
+			end
+		end
 	end
 endmodule

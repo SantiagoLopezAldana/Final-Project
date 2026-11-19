@@ -16,7 +16,7 @@ module image_top #(parameter WIDTH = 128, parameter HEIGHT = 128)(
 	
 	uart_rx #(
 		.CLK_FREQ(50000000),
-		.BAUD_RATE(9600)
+		.BAUD_RATE(115200)
 	) RX0 (
 		.clk(CLOCK_50),
 		.reset(reset),
@@ -27,7 +27,7 @@ module image_top #(parameter WIDTH = 128, parameter HEIGHT = 128)(
 	
 	uart_tx #(
         .CLK_FREQ(50000000),
-        .BAUD_RATE(9600)
+        .BAUD_RATE(115200)
     ) TX0 (
         .clk(CLOCK_50),
         .reset(reset),
@@ -94,7 +94,7 @@ module image_top #(parameter WIDTH = 128, parameter HEIGHT = 128)(
 	//features
 	//classify-> is_bean
 	
-	//transmisión
+	//transmision
 	reg pending;
 	reg pending_pixel;
 	

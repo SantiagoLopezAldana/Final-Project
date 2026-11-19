@@ -3,7 +3,7 @@ module image_top #(parameter WIDTH = 128, parameter HEIGHT = 128)(
 	input wire CLOCK_50,
 	input wire RESET_N,
 	input wire UART_RX,
-	output wire UART_TX
+	output wire UART_TX,
 	output wire is_bean);
 	
 	wire reset;

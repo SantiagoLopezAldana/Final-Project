@@ -1,20 +1,18 @@
-//Py->UART->esp32->FPGA
-module image(
+//Py->esp32 (UART)->FPGA->esp32 (UART)->Py
+module image #(parameter WIDTH = 128, parameter HEIGHT = 128)(
 	input wire CLOCK_50,
 	input wire RESET_N,
 	input wire UART_RX,
-	output wire UART_TX
-	output reg [7:0] R,
-	output reg [7:0] G,
-	output reg [7:0] B); //0-255 tono
+	output wire UART_TX);
 	
 	wire reset;
 	assign reset = ~RESET_N;
-	
 	wire [7:0] rx_data;
 	wire rx_done;
+	reg [7:0] tx_data;
+    reg tx_start;
+    wire tx_busy;
 	
-
 	uart_rx #(
 		.CLK_FREQ(50000000),
 		.BAUD_RATE(9600)
@@ -25,8 +23,26 @@ module image(
 		.data_out(rx_data),
 		.data_valid(rx_done)
 	);
+	
+	uart_tx #(
+        .CLK_FREQ(50000000),
+        .BAUD_RATE(9600)
+    ) TX0 (
+        .clk(CLOCK_50),
+        .reset(reset),
+        .tx_start(tx_start),
+        .data_in(tx_data),
+        .tx(UART_TX),
+        .busy(tx_busy)
+    );  
 
-	reg [2:0] state;       
+	//Recibe RGB
+	reg [7:0] R;
+	reg [7:0] G
+	reg [7:0] B
+	
+	reg [2:0] state;
+	reg rgb_valid;
 	
 	always @(posedge CLOCK_50 or posedge reset) begin
 		if (reset) begin
@@ -34,6 +50,7 @@ module image(
 			G <= 8'd0;
 			B <= 8'd0;
 			state <= 2'd0;
+			rgb_valid <= 1'b0;
 		end else begin
 			if (rx_done) begin      
 				case (state)
@@ -48,9 +65,32 @@ module image(
 					2'd2: begin //Azul
 						B <= rx_data;
 						state <= 2'd0;
+						rgb_valid <= 1'b1;
 					end
+					default: state <= 2'd0;
 				endcase
 			end
 		end
 	end
+	//Procesa la imagen
+
+	//Escala de grises (3 colores a gris)
+	wire [7:0] gray;
+	wire gray_valid;
+
+	grayscale GRAY (.clk(CLOCK_50), .rst(RESET_N), .valid(rgb_valid), .R(R), .G(G), .B(B), .valid_o(gray_valid), .gray(gray));
+
+	wire pixel;
+	wire thr_valid;
+
+	thresholding THR (.clk(CLOCK_50), .rst(RESET_N), .valid(gray_valid), .gray(gray), .valid_o(thr_valid), .pixel(pixel));
+
+	wire pixel_o;
+	wire valid_cont;
+
+	contouring #(.WIDTH(WIDTH)) CONT (.clk(CLOCK_50), .rst(RESET_N), .valid(thr_valid), .pixel(pixel), .valid_o(valid_cont), .pixel_o(pixel_o));
+
+	//transmisión
+
+	
 endmodule

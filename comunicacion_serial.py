@@ -1,3 +1,5 @@
+#python -m pip install pyserial Pillow
+
 
 import serial
 import time

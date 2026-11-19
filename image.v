@@ -1,4 +1,4 @@
-//Py->esp32 (UART)->FPGA->esp32 (UART)->Py
+//Py->esp32 (UART), 49152 bytes->FPGA->esp32 (UART), 16385 bytes->Py
 module image #(parameter WIDTH = 128, parameter HEIGHT = 128)(
 	input wire CLOCK_50,
 	input wire RESET_N,
@@ -38,8 +38,8 @@ module image #(parameter WIDTH = 128, parameter HEIGHT = 128)(
 
 	//Recibe RGB
 	reg [7:0] R;
-	reg [7:0] G
-	reg [7:0] B
+	reg [7:0] G;
+	reg [7:0] B;
 	
 	reg [2:0] state;
 	reg rgb_valid;
@@ -94,11 +94,11 @@ module image #(parameter WIDTH = 128, parameter HEIGHT = 128)(
 	reg pending;
 	reg pending_pixel;
 	
-	always@(posedge CLOCK_50 or posedge rst) begin
-		if(rst)begin
+	always@(posedge CLOCK_50 or posedge reset) begin
+		if(reset)begin
 			tx_data <= 1'b0;
 			pending <= 1'b0;
-			pennding_pixel <= 1'b0;
+			pending_pixel <= 1'b0;
 		end else begin
             tx_start <= 0;
 			if (valid_cont) begin

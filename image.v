@@ -91,6 +91,25 @@ module image #(parameter WIDTH = 128, parameter HEIGHT = 128)(
 	contouring #(.WIDTH(WIDTH)) CONT (.clk(CLOCK_50), .rst(RESET_N), .valid(thr_valid), .pixel(pixel), .valid_o(valid_cont), .pixel_o(pixel_o));
 
 	//transmisión
-
+	reg pending;
+	reg pending_pixel;
 	
+	always@(posedge CLOCK_50 or posedge rst) begin
+		if(rst)begin
+			tx_data <= 1'b0;
+			pending <= 1'b0;
+			pennding_pixel <= 1'b0;
+		end else begin
+            tx_start <= 0;
+			if (valid_cont) begin
+                pending <= 1'b1;
+                pending_pixel <= pixel_o;
+            end
+            if (!tx_busy && pending) begin
+                tx_data <= pending_pixel ? 8'd255 : 8'd0;
+                tx_start <= 1'b1;
+                pending <= 1'b0;
+            end
+        end
+	end
 endmodule

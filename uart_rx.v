@@ -1,4 +1,4 @@
-module uart_rx #(parameter CLK_FREQ = 50000000, parameter BAUD_RATE = 9600)(
+module uart_rx #(parameter CLK_FREQ = 50000000, parameter BAUD_RATE = 115200)(
 	input wire clk,
 	input wire reset,
 	input wire rx,

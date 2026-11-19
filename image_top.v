@@ -3,7 +3,8 @@ module image_top #(parameter WIDTH = 128, parameter HEIGHT = 128)(
 	input wire CLOCK_50,
 	input wire RESET_N,
 	input wire UART_RX,
-	output wire UART_TX);
+	output wire UART_TX
+	output wire is_bean);
 	
 	wire reset;
 	assign reset = ~RESET_N;
@@ -90,6 +91,9 @@ module image_top #(parameter WIDTH = 128, parameter HEIGHT = 128)(
 
 	contouring #(.WIDTH(WIDTH)) CONT (.clk(CLOCK_50), .rst(RESET_N), .valid(thr_valid), .pixel(pixel), .valid_o(valid_cont), .pixel_o(pixel_o));
 
+	//features
+	//classify-> is_bean
+	
 	//transmisión
 	reg pending;
 	reg pending_pixel;

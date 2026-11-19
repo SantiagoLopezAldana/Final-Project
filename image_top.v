@@ -1,5 +1,5 @@
 //Py->esp32 (UART), 49152 bytes->FPGA->esp32 (UART), 16385 bytes->Py
-module image #(parameter WIDTH = 128, parameter HEIGHT = 128)(
+module image_top #(parameter WIDTH = 128, parameter HEIGHT = 128)(
 	input wire CLOCK_50,
 	input wire RESET_N,
 	input wire UART_RX,

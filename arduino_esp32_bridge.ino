@@ -14,6 +14,9 @@ void setup(){
   Serial.begin(PC_BAUD);
   delay(500);
   FPGA_Serial.begin(FPGA_BAUD, SERIAL_8N1, FPGA_RX_PIN, FPGA_TX_PIN);
+  // Serial.println("ESP32 listo: puente PC <-> FPGA");
+}
+
   Serial.println("ESP32 listo: puente PC <-> FPGA");
 }
 void loop(){

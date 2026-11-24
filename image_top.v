@@ -23,7 +23,7 @@ module image_top #(parameter WIDTH = 128, parameter HEIGHT = 128)(
 	
 	uart_rx #(
 		.CLK_FREQ(50000000),
-		.BAUD_RATE(115200)
+		.BAUD_RATE(9600)
 	) RX0 (
 		.clk(CLOCK_50),
 		.reset(reset),
@@ -34,7 +34,7 @@ module image_top #(parameter WIDTH = 128, parameter HEIGHT = 128)(
 	
 	uart_tx #(
 		.CLK_FREQ(50000000),
-		.BAUD_RATE(115200)
+		.BAUD_RATE(9600)
 	) TX0 (
 		.clk(CLOCK_50),
 		.reset(reset),
@@ -42,7 +42,8 @@ module image_top #(parameter WIDTH = 128, parameter HEIGHT = 128)(
 		.data_in(tx_data),
 		.tx(UART_TX),
 		.busy(tx_busy)
-	);  
+	);
+ 
 
 	// Recibe RGB y genera pulso de inicio por cada imagen
 	reg [7:0] R;

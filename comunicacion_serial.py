@@ -8,7 +8,7 @@ from PIL import Image
 # ==========================================
 
 PORT = 'COM4'
-BAUD = 115200  # Debe coincidir con image_top.v y arduino_esp32_bridge.ino
+BAUD = 9600  # Debe coincidir con image_top.v y arduino_esp32_bridge.ino
 
 WIDTH = 128
 HEIGHT = 128
@@ -24,7 +24,8 @@ TOTAL_TX_BYTES = TOTAL_PIXELS * 3
 # La FPGA devuelve 1 byte por pixel (16,384) + 1 byte de clasificacion (16,385)
 TOTAL_RX_BYTES = TOTAL_PIXELS + 1
 
-CHUNK_SIZE = 1024
+# Paquetes pequeños para no saturar el buffer del ESP32 a 9600 baudios
+CHUNK_SIZE = 64
 
 # ==========================================
 # PREPARAR IMAGEN
@@ -69,7 +70,7 @@ def enviar_imagen(ser):
         n = ser.write(bloque)
         ser.flush()
         enviados += n
-        time.sleep(0.005)  # Evita saturar el buffer del ESP32
+        time.sleep(0.07)  # Sincronizado con el flujo real de 9600 baudios (~914 B/s)
 
         porcentaje = (enviados / TOTAL_TX_BYTES) * 100
         print(f"\rTransmitido: {porcentaje:.1f}%", end='')
@@ -85,7 +86,7 @@ def recibir_imagen(ser):
     print("\nEsperando imagen procesada y clasificacion...")
 
     ultimo_dato = time.time()
-    TIMEOUT_RECEPCION = 15
+    TIMEOUT_RECEPCION = 75  # Margen suficiente para los ~51.2 s que toma a 9600 baudios
 
     while len(resultado) < TOTAL_RX_BYTES:
         faltantes = TOTAL_RX_BYTES - len(resultado)
@@ -119,7 +120,7 @@ try:
         PORT,
         BAUD,
         timeout=1,
-        write_timeout=10
+        write_timeout=75
     ) as ser:
 
         # Dar tiempo para estabilizar la comunicacion tras reinicio del ESP32
@@ -162,7 +163,7 @@ try:
         print("VEREDICTO FPGA: NO ES UN FRIJOL / RECHAZADO (is_bean = 0)")
     print("==========================================")
 
-    # Convertir los bytes 0 y 1 a valores 0 y 255
+    # Convertir los bytes recibidos a valores 0 y 255
     imagen_binaria = bytearray(
         255 if pixel != 0 else 0
         for pixel in pixeles_img
@@ -188,4 +189,5 @@ except FileNotFoundError:
 
 except Exception as e:
     print("Ocurrio un error:", e)
+
 

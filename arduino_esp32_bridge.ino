@@ -6,8 +6,8 @@
 #include <Arduino.h>
 static const int FPGA_RX_PIN = 16; // RX del ESP32 recibe desde TX de FPGA
 static const int FPGA_TX_PIN = 17; // TX del ESP32 transmite hacia RX de FPGA
-static const uint32_t PC_BAUD = 9600;
-static const uint32_t FPGA_BAUD = 9600;
+static const uint32_t PC_BAUD = 115200;
+static const uint32_t FPGA_BAUD = 115200;
 HardwareSerial FPGA_Serial(2);
 
 void setup(){

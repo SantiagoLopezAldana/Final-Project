@@ -9,12 +9,12 @@ from PIL import Image
 # ==========================================
 
 PORT = 'COM4'
-BAUD = 115200  # Debe coincidir con ESP32 y FPGA
+BAUD = 115200
 
 WIDTH = 128
 HEIGHT = 128
 
-IMAGE_PATH = r'C:\Users\185008\Downloads\coffe.jpg'
+IMAGE_PATH = r"C:\Users\185008\Downloads\flecha.jpg"
 
 # Cantidad total de pixeles
 TOTAL_PIXELS = WIDTH * HEIGHT
@@ -232,12 +232,10 @@ try:
         # ======================================
 
         if len(resultado) != TOTAL_RX_BYTES:
-
+            faltantes = TOTAL_RX_BYTES - len(resultado)
             print("\nERROR: Transmision incompleta.")
-
-            raise RuntimeError(
-                "No se reconstruira una imagen incompleta."
-            )
+            resultado.extend([0]*faltantes)
+        print("Bytes finales: ", len(resultado))
 
         print("\nComunicacion completada correctamente.")
 

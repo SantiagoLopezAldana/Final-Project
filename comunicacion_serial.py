@@ -14,7 +14,7 @@ BAUD = 115200
 WIDTH = 128
 HEIGHT = 128
 
-IMAGE_PATH = r"C:\Users\185008\Downloads\flecha.jpg"
+IMAGE_PATH = r"C:\Users\185008\Pictures\bean5.png"
 
 # Cantidad total de pixeles
 TOTAL_PIXELS = WIDTH * HEIGHT
@@ -29,7 +29,7 @@ TOTAL_RX_BYTES = TOTAL_PIXELS + 1
 CHUNK_SIZE = 1024
 
 # Tiempo maximo sin recibir datos una vez terminado el envio
-TIMEOUT_RECEPCION = 75
+TIMEOUT_RECEPCION = 15
 
 
 # ==========================================

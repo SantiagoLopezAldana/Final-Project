@@ -1,3 +1,4 @@
+
 import serial
 import threading
 import time
@@ -8,23 +9,22 @@ from PIL import Image
 # ==========================================
 
 PORT = 'COM4'
-BAUD = 115200
+BAUD = 9600
 
 WIDTH = 128
 HEIGHT = 128
 
-IMAGE_PATH = r"C:\Users\185008\Downloads\flecha.jpg"
+IMAGE_PATH = r'C:\Users\185008\Downloads\coffe.jpg'
 
-# Cantidad de pixeles
 TOTAL_PIXELS = WIDTH * HEIGHT
-
-# Cada pixel tiene 3 bytes: R, G, B
 TOTAL_TX_BYTES = TOTAL_PIXELS * 3
+TOTAL_RX_BYTES = TOTAL_PIXELS + 1
 
-# La FPGA devuelve 1 byte por pixel
-TOTAL_RX_BYTES = TOTAL_PIXELS
+CHUNK_SIZE = 64
 
-CHUNK_SIZE = 1024
+# Tiempo maximo sin recibir datos.
+# Debe permitir que termine el envio de toda la imagen.
+TIMEOUT_RECEPCION = 180
 
 # ==========================================
 # PREPARAR IMAGEN
@@ -34,79 +34,124 @@ print("Cargando imagen...")
 
 img = Image.open(IMAGE_PATH).convert('RGB')
 
-# Redimensionar conservando las proporciones
-img.thumbnail((WIDTH, HEIGHT), Image.Resampling.LANCZOS)
+img.thumbnail(
+    (WIDTH, HEIGHT),
+    Image.Resampling.LANCZOS
+)
 
-# Crear un fondo blanco de 128x128
-canvas = Image.new('RGB', (WIDTH, HEIGHT), (255, 255, 255))
+canvas = Image.new(
+    'RGB',
+    (WIDTH, HEIGHT),
+    (255, 255, 255)
+)
 
-# Centrar la imagen
 x = (WIDTH - img.width) // 2
 y = (HEIGHT - img.height) // 2
 
 canvas.paste(img, (x, y))
 
-# Convertir imagen a bytes RGB
+# Guardar exactamente la imagen que enviaremos
+canvas.save("imagen_enviada.png")
+
 data = canvas.tobytes()
 
 if len(data) != TOTAL_TX_BYTES:
-    raise ValueError("El tamaño de la imagen RGB no es correcto")
+    raise ValueError("Tamaño RGB incorrecto")
 
-print("Imagen preparada correctamente.")
+print("Imagen preparada.")
 print("Resolucion:", WIDTH, "x", HEIGHT)
-print("Bytes RGB:", TOTAL_TX_BYTES)
+print("Bytes de entrada:", len(data))
 
 # ==========================================
-# TRANSMISION A LA FPGA
+# VARIABLES DE CONTROL
+# ==========================================
+
+error_tx = []
+tx_terminado = threading.Event()
+
+# ==========================================
+# TRANSMISION
 # ==========================================
 
 def enviar_imagen(ser):
 
-    enviados = 0
+    try:
 
-    print("\nEnviando imagen a la FPGA...")
+        enviados = 0
 
-    while enviados < TOTAL_TX_BYTES:
+        print("\nEnviando imagen a FPGA...")
 
-        bloque = data[enviados:enviados + CHUNK_SIZE]
+        while enviados < TOTAL_TX_BYTES:
 
-        n = ser.write(bloque)
+            bloque = data[
+                enviados:enviados + CHUNK_SIZE
+            ]
 
-        enviados += n
+            n = ser.write(bloque)
 
-        porcentaje = (enviados / TOTAL_TX_BYTES) * 100
+            if n <= 0:
+                raise RuntimeError(
+                    "La transmision se detuvo"
+                )
 
-        print(
-            f"\rTransmitido: {porcentaje:.1f}%",
-            end=''
-        )
+            enviados += n
 
-    print("\nTransmision finalizada.")
+            porcentaje = (
+                enviados / TOTAL_TX_BYTES
+            ) * 100
+
+            print(
+                f"\rEnviado: {porcentaje:.1f}% "
+                f"({enviados}/{TOTAL_TX_BYTES})",
+                end=''
+            )
+
+            # Conservamos una pausa prudente
+            # para el puente ESP32 a 9600 baudios.
+            time.sleep(0.07)
+
+        ser.flush()
+
+        print("\nTransmision terminada.")
+
+    except Exception as e:
+
+        error_tx.append(e)
+
+    finally:
+
+        tx_terminado.set()
+
 
 # ==========================================
-# RECEPCION DE LA FPGA
+# RECEPCION
 # ==========================================
 
 def recibir_imagen(ser):
 
     resultado = bytearray()
 
-    print("\nEsperando imagen procesada...")
+    print("\nEsperando respuesta de FPGA...")
 
     ultimo_dato = time.time()
-    TIMEOUT_RECEPCION = 15
 
     while len(resultado) < TOTAL_RX_BYTES:
 
         faltantes = TOTAL_RX_BYTES - len(resultado)
 
-        bloque = ser.read(min(CHUNK_SIZE, faltantes))
+        bloque = ser.read(
+            min(CHUNK_SIZE, faltantes)
+        )
 
         if bloque:
+
             resultado.extend(bloque)
+
             ultimo_dato = time.time()
 
-            porcentaje = len(resultado) / TOTAL_RX_BYTES * 100
+            porcentaje = (
+                len(resultado) / TOTAL_RX_BYTES
+            ) * 100
 
             print(
                 f"\rRecibido: {porcentaje:.2f}% "
@@ -114,14 +159,21 @@ def recibir_imagen(ser):
                 end=''
             )
 
-        elif time.time() - ultimo_dato > TIMEOUT_RECEPCION:
-            print("\nTimeout: no llegan más datos.")
-            break
+        else:
+
+            # No terminar por timeout mientras
+            # Python todavía está enviando la imagen.
+            if tx_terminado.is_set():
+
+                if time.time() - ultimo_dato > TIMEOUT_RECEPCION:
+                    print("\nTimeout de recepcion.")
+                    break
 
     print("\nBytes recibidos:", len(resultado))
     print("Bytes faltantes:", TOTAL_RX_BYTES - len(resultado))
 
     return resultado
+
 
 # ==========================================
 # COMUNICACION SERIAL
@@ -133,17 +185,14 @@ try:
         PORT,
         BAUD,
         timeout=1,
-        write_timeout=10
+        write_timeout=75
     ) as ser:
 
-        # Dar tiempo para estabilizar la comunicacion
         time.sleep(2)
 
-        # Limpiar buffers
         ser.reset_input_buffer()
         ser.reset_output_buffer()
 
-        # Hilo de transmision
         hilo_tx = threading.Thread(
             target=enviar_imagen,
             args=(ser,)
@@ -153,55 +202,77 @@ try:
 
         resultado = recibir_imagen(ser)
 
-        # Esperar a que termine completamente el envio
         hilo_tx.join()
 
-        # Completar los bytes faltantes
-        if len(resultado) < TOTAL_RX_BYTES:
+        if error_tx:
+            raise RuntimeError(
+                f"Error de transmision: {error_tx[0]}"
+            )
 
-            faltantes = TOTAL_RX_BYTES - len(resultado)
+        # ======================================
+        # VERIFICAR RECEPCION
+        # ======================================
 
-            resultado.extend([0] * faltantes)
+        if len(resultado) != TOTAL_RX_BYTES:
 
-            print("\nSe rellenaron", faltantes, "bytes con ceros")
+            print("\nERROR: Transmision incompleta.")
 
-        print("Bytes finales:", len(resultado))
+            raise RuntimeError(
+                "No se reconstruira una imagen incompleta."
+            )
 
-        print("\nComunicacion finalizada correctamente.")
+        print("\nComunicacion completa.")
 
-# ==========================================
-# RECONSTRUIR IMAGEN
-# ==========================================
+        # ======================================
+        # SEPARAR IMAGEN Y CLASIFICACION
+        # ======================================
 
-    # Convertir los bytes 0 y 1 a valores 0 y 255
-    imagen_binaria = bytearray(
-        255 if pixel != 0 else 0
-        for pixel in resultado
-    )
+        pixeles_img = resultado[:TOTAL_PIXELS]
 
-    # Crear imagen en escala de grises
-    img_resultado = Image.frombytes(
-        'L',
-        (WIDTH, HEIGHT),
-        bytes(imagen_binaria)
-    )
+        es_frijol = resultado[TOTAL_PIXELS]
 
-    # Guardar imagen
-    img_resultado.save('resultado_fpga.png')
+        print("\n================================")
+        print("RESULTADO DE CLASIFICACION")
 
-    print("\nImagen guardada como resultado_fpga1.png")
+        if es_frijol == 1:
+            print("ES UN FRIJOL")
+        elif es_frijol == 0:
+            print("NO ES UN FRIJOL")
+        else:
+            print("ERROR: BYTE DE CLASIFICACION INVALIDO")
 
-    # Mostrar imagen procesada
-    img_resultado.show()
+        print("Byte recibido:", es_frijol)
+        print("================================")
+
+        # ======================================
+        # RECONSTRUIR IMAGEN
+        # ======================================
+
+        imagen_binaria = bytearray(
+            255 if pixel != 0 else 0
+            for pixel in pixeles_img
+        )
+
+        img_resultado = Image.frombytes(
+            'L',
+            (WIDTH, HEIGHT),
+            bytes(imagen_binaria)
+        )
+
+        img_resultado.save("resultado_fpga.png")
+
+        print("\nImagen guardada: resultado_fpga.png")
+
+        img_resultado.show()
 
 except serial.SerialException as e:
 
-    print("Error de comunicacion serial:", e)
+    print("Error serial:", e)
 
 except FileNotFoundError:
 
-    print("No se encontro el archivo:", IMAGE_PATH)
+    print("No se encontro la imagen:", IMAGE_PATH)
 
 except Exception as e:
 
-    print("Ocurrio un error:", e)
+    print("Error:", e)

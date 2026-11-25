@@ -6,7 +6,7 @@ module thresholding
     output reg valid_o,
 	output reg pixel); //255->1 ("blanco" o "negro")
 
-	localparam th = 8'd127; //umbral: 127/255
+	localparam th = 8'd128; //umbral: 127/255
 	
     always @(posedge clk or posedge rst) begin
         if (rst) begin
@@ -15,8 +15,8 @@ module thresholding
         end else begin
             valid_o <= valid;
 			if (valid) begin
-				if (gray > th) pixel <= 1; //si mayor al umbral blanco
-				else pixel <= 0; //si es menor es negro
+				if (gray > th) pixel <= 1; //si mayor al umbral NEGRO
+				else pixel <= 0; //si es menor es BLANCO
 			end
         end
     end

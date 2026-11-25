@@ -23,7 +23,7 @@ module image_top #(parameter WIDTH = 128, parameter HEIGHT = 128)(
 	
 	uart_rx #(
 		.CLK_FREQ(50000000),
-		.BAUD_RATE(9600)
+		.BAUD_RATE(115200)
 	) RX0 (
 		.clk(CLOCK_50),
 		.reset(reset),
@@ -34,7 +34,7 @@ module image_top #(parameter WIDTH = 128, parameter HEIGHT = 128)(
 	
 	uart_tx #(
 		.CLK_FREQ(50000000),
-		.BAUD_RATE(9600)
+		.BAUD_RATE(115200)
 	) TX0 (
 		.clk(CLOCK_50),
 		.reset(reset),
@@ -98,75 +98,86 @@ module image_top #(parameter WIDTH = 128, parameter HEIGHT = 128)(
 	wire [7:0] gray;
 	wire gray_valid;
 	grayscale GRAY (
-		.clk(CLOCK_50), .rst(reset), .valid(rgb_valid),
-		.R(R), .G(G), .B(B), .valid_o(gray_valid), .gray(gray)
+		.clk(CLOCK_50), 
+		.rst(reset), 
+		.valid(rgb_valid),
+		.R(R), 
+		.G(G), 
+		.B(B), 
+		.valid_o(gray_valid), 
+		.gray(gray)
 	);
 
 	wire pixel;
 	wire thr_valid;
 	thresholding THR (
-		.clk(CLOCK_50), .rst(reset), .valid(gray_valid),
-		.gray(gray), .valid_o(thr_valid), .pixel(pixel)
+		.clk(CLOCK_50), 
+		.rst(reset), 
+		.valid(gray_valid),
+		.gray(gray), 
+		.valid_o(thr_valid), 
+		.pixel(pixel)
 	);
 
 	wire pixel_o;
 	wire valid_cont;
 	contouring #(.WIDTH(WIDTH)) CONT (
-		.clk(CLOCK_50), .rst(reset), .valid(thr_valid),
-		.pixel(pixel), .valid_o(valid_cont), .pixel_o(pixel_o)
+		.clk(CLOCK_50), 
+		.rst(reset), 
+		.valid(thr_valid),
+		.pixel(pixel), 
+		.valid_o(valid_cont), 
+		.pixel_o(pixel_o)
 	);
-
-	// Extracción de características
+		// Extracción de características
 	wire feat_done;
 	wire [14:0] area;
 	wire [16:0] perimeter;
 	wire [7:0] w, h, cx, cy;
 
 	features #(.WIDTH(WIDTH), .HEIGHT(HEIGHT)) FEAT (
-		.clk(CLOCK_50), .rst(reset), .start(img_start),
-		.valid(valid_cont), .pixel(pixel_o),
-		.done(feat_done), .area(area), .perimeter(perimeter),
-		.w(w), .h(h), .cx(cx), .cy(cy)
+		.clk(CLOCK_50), 
+		.rst(reset), 
+		.start(img_start),
+		.valid(valid_cont), 
+		.pixel(pixel_o),
+		.done(feat_done), 
+		.area(area), 
+		.perimeter(perimeter),
+		.w(w), 
+		.h(h), 
+		.cx(cx), 
+		.cy(cy)
 	);
 
 	// Clasificación final -> is_bean
 	wire result_valid;
 
 	classify #(
-		.AREA_MIN(1500), .AREA_MAX(6000),
-		.PERIM_MIN(150), .PERIM_MAX(500),
-		.AR_MIN(20),     .AR_MAX(40),
-		.CX_MIN(24),     .CX_MAX(104),
-		.CY_MIN(24),     .CY_MAX(104)
+		.AREA_MIN(335), 
+		.AREA_MAX(471),
+		.PERIM_MIN(71), 
+		.PERIM_MAX(90),
+		.AR_FRAC(4),
+		.AR_MIN_X1000(1200),
+		.AR_MAX_X1000(2100),
+		.CX_MIN(24),     
+		.CX_MAX(104),
+		.CY_MIN(24),     
+		.CY_MAX(104)
 	) CLS (
-		.clk(CLOCK_50), .rst(reset), .done(feat_done),
-		.area(area), .perimeter(perimeter),
-		.w(w), .h(h), .cx(cx), .cy(cy),
-		.result_valid(result_valid), .is_bean(is_bean)
+		.clk(CLOCK_50), 
+		.rst(reset), 
+		.done(feat_done),
+		.area(area), 
+		.perimeter(perimeter),
+		.w(w), 
+		.h(h), 
+		.cx(cx), 
+		.cy(cy),
+		.result_valid(result_valid), 
+		.is_bean(is_bean)
 	);
-
-	// Contadores de depuración (Signal Tap)
-	reg [14:0] contador_cont;
-	reg [14:0] contador_tx;
-	reg [14:0] contador_rgb;
-	reg [14:0] contador_gray;
-	reg [14:0] contador_thr;
-
-	always @(posedge CLOCK_50 or posedge reset) begin
-		if (reset) begin
-			contador_rgb  <= 0;
-			contador_gray <= 0;
-			contador_thr  <= 0;
-			contador_cont <= 0;
-			contador_tx   <= 0;
-		end else begin
-			if (rgb_valid)  contador_rgb  <= contador_rgb + 1'b1;
-			if (gray_valid) contador_gray <= contador_gray + 1'b1;
-			if (thr_valid)  contador_thr  <= contador_thr + 1'b1;
-			if (valid_cont) contador_cont <= contador_cont + 1'b1;
-			if (tx_start)   contador_tx   <= contador_tx + 1'b1;
-		end
-	end
 	
 	// Transmisión: 16,384 píxeles + 1 byte con resultado is_bean
 	reg pending;
@@ -206,4 +217,3 @@ module image_top #(parameter WIDTH = 128, parameter HEIGHT = 128)(
 		end
 	end
 endmodule
-

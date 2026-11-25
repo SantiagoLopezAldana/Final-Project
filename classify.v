@@ -1,14 +1,15 @@
 module classify #(
-    parameter AREA_MIN  = 1500,
-    parameter AREA_MAX  = 6000,
-    parameter PERIM_MIN = 150,
-    parameter PERIM_MAX = 500,
-    parameter AR_MIN    = 20,   // Relación de aspecto mín: 20/16 = 1.25
-    parameter AR_MAX    = 40,   // Relación de aspecto máx: 40/16 = 2.50
-    parameter CX_MIN    = 24,   // Zona central en X (de 128 px)
-    parameter CX_MAX    = 104,
-    parameter CY_MIN    = 24,   // Zona central en Y (de 128 px)
-    parameter CY_MAX    = 104
+    parameter AREA_MIN     = 335,
+    parameter AREA_MAX     = 471,
+    parameter PERIM_MIN    = 71,
+    parameter PERIM_MAX    = 90,
+    parameter AR_FRAC      = 4, 
+    parameter AR_MIN_X1000 = 1200,   // 1.200
+    parameter AR_MAX_X1000 = 2100,   // 2.100
+    parameter CX_MIN = 24, 
+	 parameter CX_MAX = 104,
+    parameter CY_MIN = 24, 
+	 parameter CY_MAX = 104
 )(
     input wire clk,
     input wire rst,
@@ -22,10 +23,12 @@ module classify #(
     output reg result_valid,
     output reg is_bean
 );
+    localparam AR_MIN = (AR_MIN_X1000 * (1 << AR_FRAC) + 500) / 1000;
+    localparam AR_MAX = (AR_MAX_X1000 * (1 << AR_FRAC) + 500) / 1000;
 
-    wire [7:0] lng = (w >= h) ? w : h;
-    wire [7:0] sht = (w >= h) ? h : w;
-    wire [15:0] l16 = {4'd0, lng, 4'd0};
+    wire [7:0]  lng = (w >= h) ? w : h;
+    wire [7:0]  sht = (w >= h) ? h : w;
+    wire [15:0] l16 = {8'd0, lng} << AR_FRAC;
     wire [15:0] lo  = AR_MIN * sht;
     wire [15:0] hi  = AR_MAX * sht;
 
@@ -42,8 +45,7 @@ module classify #(
         end else begin
             result_valid <= done;
             if (done)
-                is_bean <= ok_area && ok_per && ok_ar && ok_cen;
+                is_bean <= ok_area && ok_per && ok_ar; //por el momento sin centroide
         end
     end
 endmodule
-
